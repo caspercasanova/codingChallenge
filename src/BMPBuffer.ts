@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 // https://betterprogramming.pub/how-to-write-an-async-class-constructor-in-typescript-javascript-7d7e8325c35e
+// https://stackoverflow.com/questions/35743426/async-constructor-functions-in-typescript
 type mutatorFunction = () => void; // https://www.typescriptlang.org/docs/handbook/2/functions.html
 
 class BMPBuffer {
@@ -12,6 +13,8 @@ class BMPBuffer {
   bitsPerPixel: number;
   fileName: string | null;
   offset: number;
+  errors: string[];
+  compressionMethod: null | 0;
 
   constructor(bufferSamp: Buffer) {
     this.imagePath = null;
@@ -20,7 +23,11 @@ class BMPBuffer {
     this.negativeBuffer = null;
     this.bitsPerPixel = 24;
     this.offset = 0;
+    this.compressionMethod = null;
+    this.errors = [];
   }
+
+  init() {}
 
   setImagePath(pathToPic: string): void {
     try {
@@ -28,6 +35,7 @@ class BMPBuffer {
       this.fileName = path.basename(this.imagePath);
     } catch (err) {
       console.error('Please Provide A Correct Path To The File');
+      this.errors.push('Incorrect Path To Image');
     }
   }
 
@@ -36,10 +44,10 @@ class BMPBuffer {
     try {
       const data = await fs.readFile(imagePath);
       const buffer = Buffer.from(data);
-
       return buffer;
     } catch (err) {
       console.error('Reading the file failed');
+      this.errors.push('File Reading Failed');
     }
   }
 
@@ -51,6 +59,29 @@ class BMPBuffer {
     console.log('Copying Complete', negativeBuffer);
   }
 
+  mutateNegativeBufferColors() {
+    let start = this.offset;
+    console.log('Mutating the Colors');
+
+    // traverse and inverse colors
+    try {
+      for (let i = start; i < this.negativeBuffer!.length; i += 3) {
+        let r = this.ogImageBuffer.readUInt8(i);
+        let g = this.ogImageBuffer.readUInt8(i + 1);
+        let b = this.ogImageBuffer.readUInt8(i + 2);
+
+        const { newR, newG, newB } = this.invertRGB(r, g, b);
+
+        this.negativeBuffer!.writeUInt8(newR, i);
+        this.negativeBuffer!.writeUInt8(newG, i + 1);
+        this.negativeBuffer!.writeUInt8(newB, i + 2);
+      }
+    } catch (err) {
+      console.error('Something Went Wrong When Writing The New Colors');
+      this.errors.push('Failed Writing Negative Colors');
+    }
+  }
+
   async createNegativeBMP(): Promise<void> {
     // allocate a buffer with equiv space as the ogBuffer
     this.negativeBuffer = Buffer.alloc(this.ogImageBuffer!.length);
@@ -58,30 +89,16 @@ class BMPBuffer {
     this.copyBMPHeader(this.ogImageBuffer!, this.negativeBuffer);
     // Might need more checks here
 
-    // traverse and inverse colors
-    let start = this.offset;
-    console.log('Mutating the Colors');
-    for (let i = start; i < this.negativeBuffer.length; i += 3) {
-      let r = this.ogImageBuffer.readUInt8(i);
-      let g = this.ogImageBuffer.readUInt8(i + 1);
-      let b = this.ogImageBuffer.readUInt8(i + 2);
-
-      const { newR, newG, newB } = this.invertRGB(r, g, b);
-
-      this.negativeBuffer.writeUInt8(newR, i);
-      this.negativeBuffer.writeUInt8(newG, i + 1);
-      this.negativeBuffer.writeUInt8(newB, i + 2);
-    }
+    this.mutateNegativeBufferColors();
 
     // write bmp file utilizing negative buffer
     try {
       await this.writeImage(this.negativeBuffer);
       console.log('The Creation has completed!');
     } catch (err) {
-      console.log('Creation had an error!!', String(err));
+      console.error('Creation had an error!', String(err));
+      this.errors.push('Writing The Negative File To Disk Failed');
     }
-
-    // any cleanup i need to do??
   }
 
   writeImage(buffer: Buffer, fileName: string = 'sick') {
@@ -102,11 +119,16 @@ class BMPBuffer {
 
   analyzeBMP(buffer: Buffer) {
     console.log('Analyzing Header...');
-    const { format, bitsPerPixel, offset } = this.extractBMPHeader(buffer);
+    const {
+      format,
+      bitsPerPixel,
+      offset,
+      compressionMethod,
+    } = this.readingBMPHeader(buffer);
     if (format != 'BM') {
       console.error('The File Must be a BMP format');
     } else {
-      console.log('The File Format Is Correct');
+      console.log('The File Format Is Correct!');
     }
 
     if (bitsPerPixel !== this.bitsPerPixel) {
@@ -115,13 +137,21 @@ class BMPBuffer {
       console.log('The Bytes Per Pixel Is Correct!');
     }
 
+    if (compressionMethod != 0) {
+      console.error(
+        `The Image Must Have No Compression Used\n The Image Currently has the ${compressionMethod} Compression Method`
+      );
+    } else {
+      console.log('Hooray No Compression Was Used!');
+    }
+
     this.offset = offset;
   }
 
   // Extracts the header from the BMP Image
   // Some values are more important than others
   // Most importantly we need the OFFSET and the BytesPerPixel
-  extractBMPHeader(buffer: Buffer) {
+  readingBMPHeader(buffer: Buffer) {
     const format = buffer.toString('utf-8', 0, 2);
     let pos = 2;
     const fileSize = buffer.readUInt32LE(pos); // (54 bytes header + 16 bytes data)
@@ -140,7 +170,7 @@ class BMPBuffer {
     pos += 2;
     const bitsPerPixel = buffer.readUInt16LE(pos); // 24 bits
     pos += 2;
-    const compress = buffer.readUInt32LE(pos);
+    const compressionMethod = buffer.readUInt32LE(pos);
     pos += 4;
     const rawSize = buffer.readUInt32LE(pos); // Size of the raw bitmap data (including padding) filesize - offset
     pos += 4;
@@ -151,8 +181,23 @@ class BMPBuffer {
     const colors = buffer.readUInt32LE(pos);
     pos += 4;
     const importantColors = buffer.readUInt32LE(pos); //32h  zero important colors means all colors are important
-
-    // Check to make sure the Bits Per Pixel is 24
+    console.log({
+      format,
+      fileSize,
+      reserved,
+      offset,
+      headerSize,
+      width,
+      height,
+      planes,
+      bitsPerPixel,
+      compressionMethod,
+      rawSize,
+      hr,
+      vr,
+      colors,
+      importantColors,
+    });
     return {
       format,
       fileSize,
@@ -163,7 +208,7 @@ class BMPBuffer {
       height,
       planes,
       bitsPerPixel,
-      compress,
+      compressionMethod,
       rawSize,
       hr,
       vr,

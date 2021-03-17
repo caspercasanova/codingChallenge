@@ -17,11 +17,12 @@ const getBMPBuffer = async (imagePath: string) => {
 
 // '/images/sample_1280x853.bmp'
 // '/images/testPic001.bmp'
+// '/images/sick-negative.bmp'
 
 const readAndCreateNegative = async () => {
   let imagePath = path.join(
     path.dirname(__dirname),
-    `${'/images/sample_1280x853.bmp'}`
+    `${'/images/testPic001.bmp'}`
   );
 
   console.log(imagePath);
