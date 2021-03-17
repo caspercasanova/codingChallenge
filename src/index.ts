@@ -10,6 +10,7 @@ class BMPBuffer {
   negativeBuffer: null | Buffer;
   bitsPerPixel: number;
   fileName: string | null;
+  offset: number;
 
   constructor(bufferSamp: Buffer) {
     this.imagePath = null;
@@ -17,20 +18,16 @@ class BMPBuffer {
     this.ogImageBuffer = bufferSamp;
     this.negativeBuffer = null;
     this.bitsPerPixel = 24;
+    this.offset = 0;
   }
 
   setImagePath(pathToPic: string) {
     try {
-      this.imagePath = path.join(
-        path.dirname(__dirname),
-        `${pathToPic}`
-      );
+      this.imagePath = path.join(path.dirname(__dirname), `${pathToPic}`);
       this.fileName = path.basename(this.imagePath);
     } catch (err) {
       console.error(String(err));
-      let errMsg = new Error(
-        'Please Provide A Correct Path To The File'
-      );
+      let errMsg = new Error('Please Provide A Correct Path To The File');
       return { err, errMsg };
     }
   }
@@ -61,7 +58,7 @@ class BMPBuffer {
     this.copyBMPHeader(this.ogImageBuffer!, this.negativeBuffer);
 
     // traverse and inverse colors
-    let start = 54;
+    let start = this.offset;
     for (let i = start; i < this.negativeBuffer.length; i += 3) {
       let r = this.ogImageBuffer.readUInt8(i);
       let g = this.ogImageBuffer.readUInt8(i + 1);
@@ -108,6 +105,9 @@ class BMPBuffer {
     }
 
     let headerData = this.extractBMPHeader(buffer);
+    console.log('Header Data', headerData);
+    this.offset = headerData.offset;
+
     try {
       console.log('Confirming BMP Image is 24 BitsPerPixel');
       if (headerData.bitsPerPixel !== 24) {
@@ -194,13 +194,16 @@ const readAndCreateNegative = async () => {
     `${'/images/sample_1280x853.bmp'}`
   );
 
+  console.log(imagePath);
+
   let buffer = await getBMPBuffer(imagePath);
+
   let bmp;
 
   if (buffer) {
     bmp = new BMPBuffer(buffer);
   }
-
+  bmp?.analyzeBMP(bmp.ogImageBuffer);
   let negative = await bmp?.createNegativeBMP();
   console.log(negative);
 };
