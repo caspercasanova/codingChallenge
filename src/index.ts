@@ -18,3 +18,5 @@ const main = async (imageName: string) => {
 */
 
 main('images/testPic001.bmp');
+//    ^^^^^^^^^^^^^^^^^^^^^^
+//    change this string if you want a different image
