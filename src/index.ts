@@ -14,9 +14,9 @@ const main = async (imageName: string) => {
 
   '/images/sample_1280x853.bmp'
   '/images/testPic001.bmp'
- 
+  '/images/NSAbrainDagger.png'
 */
 
-main('images/testPic001.bmp');
+main('/images/testPic001.bmp');
 //    ^^^^^^^^^^^^^^^^^^^^^^
 //    change this string if you want a different image

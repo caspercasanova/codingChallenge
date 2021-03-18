@@ -23,7 +23,7 @@ Clone the Repo.
 2. In console @ root dir run `npm run start`
 3. Presto! The Image-Negative should be in the /negatives folder
 
-> Note: If you want to convert your own image, add the image to the /images/dir and change the path accordingly in the code. Visit src/index for More Directions
+> Note: If you want to convert your own image, add the image to the /images/dir and change the path accordingly in the code, save and run NPM START once more. TypeScript will rebuild the lib directory and run the code. Visit src/index if intrigued. 
 
 * You can also run the test entering in the console `npm run test`
 # Acknowledgments

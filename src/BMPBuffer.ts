@@ -67,6 +67,10 @@ class BMPBuffer {
   }
 
   async createNegativeBMP(): Promise<void> {
+    if (this.errors.length) {
+      console.log('There were errors when creating the image');
+      return;
+    }
     // allocate a buffer with equiv space as the buffer
     this.bufferTemp = Buffer.alloc(this.buffer!.length);
     // copy the header values from the ogBuffer to the new buffer
@@ -138,6 +142,7 @@ class BMPBuffer {
       console.error(
         '❌ File Format Incorrect \n(The File Must be a BMP format)'
       );
+      this.errors.push('Incorrect Fileformat');
     } else {
       console.log('✅ The File Format Is Correct!');
     }
@@ -146,6 +151,7 @@ class BMPBuffer {
       console.error(
         '❌ The Bytes Per Pixel Is Incorrect \nThe Image must be in 24 BPP format'
       );
+      this.errors.push('Incorrect Bytes Per Pixel');
     } else {
       console.log('✅ The Bytes Per Pixel Is Correct!');
     }
@@ -154,6 +160,7 @@ class BMPBuffer {
       console.error(
         `❌ The Image Compression Is Incorrect \n The Image Must Have No Compression Used \n The Image Currently has the ${compressionMethod} Compression Method`
       );
+      this.errors.push('Incorrect Compression');
     } else {
       console.log('✅ Hooray No Compression Was Used!');
     }
