@@ -1,40 +1,20 @@
-import { promises as fs } from 'fs';
-import * as path from 'path';
 import BMPBuffer from './BMPBuffer';
-// https://betterprogramming.pub/how-to-write-an-async-class-constructor-in-typescript-javascript-7d7e8325c35e
 
-const getBMPBuffer = async (imagePath: string) => {
-  console.log('Reading File');
-  try {
-    const data = await fs.readFile(imagePath);
-    const buffer = Buffer.from(data);
-    return buffer;
-  } catch (err) {
-    throw new Error('The URL Is Incorrect or File Reading Failed');
-    return null;
-  }
+const main = async (imageName: string) => {
+  let image = new BMPBuffer(imageName);
+  await image.init();
+  await image.createNegativeBMP();
 };
 
-// '/images/sample_1280x853.bmp'
-// '/images/testPic001.bmp'
-// '/images/sick-negative.bmp'
+/* 
+  Try any of these sample images. 
+  To use your own BMP image 
+  - Add a .BMP photo to the images folder and 
+  - type the name of the file in a string
 
-const readAndCreateNegative = async () => {
-  let imagePath = path.join(
-    path.dirname(__dirname),
-    `${'/images/testPic001.bmp'}`
-  );
+  '/images/sample_1280x853.bmp'
+  '/images/testPic001.bmp'
+ 
+*/
 
-  console.log(imagePath);
-
-  let buffer = await getBMPBuffer(imagePath);
-
-  let bmp;
-
-  if (buffer) {
-    bmp = new BMPBuffer(buffer);
-  }
-  bmp?.analyzeBMP(bmp.ogImageBuffer);
-  await bmp?.createNegativeBMP();
-};
-readAndCreateNegative();
+main('images/testPic001.bmp');

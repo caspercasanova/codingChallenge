@@ -11,24 +11,24 @@ The Objectives are as follow:
   - NO USE OF EXTERNAL IMAGE PROCESSING LIBRARIES
 
 ## Getting Started
+The Project comes with 2 Test Images
+To get the negative of an image install the packages and run NPM Run START
 
+If you want to invert a custom BMP of yours challenge
+  - Add the file to the /images directory
+  - In src/index.ts 
 
 
 ### Dependencies
 
-* Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-* ex. Windows 10
-* Node.js Version 14.15 / TypeScript
+* Node.js Version 14.15/ NPM / TypeScript / Possibly VSCode (to make things easier)?
 
-### Installing
-
-* How/where to download your program
-* Any modifications needed to be made to files/folders
 
 ### Executing program
 
-* How to run the program
-* Step-by-step bullets
+* Clone Repo
+* In console @ root dir run NPM INSTALL
+* 
 ```
 code blocks for commands
 ```
@@ -47,28 +47,13 @@ Contributors names and contact info
 ex. N Lopez  
 ex. [Nicholas Lopez](https://www.linkedin.com/in/310-nicholas-lopez/)
 
-## Version History
 
-* 0.2
-    * Various bug fixes and optimizations
-    * See [commit change]() or See [release history]()
-* 0.1
-    * Initial Release
-
-## License
-
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
 
 ## Acknowledgments
-
-
-
-
-Inspiration, code snippets, etc.
+Inspiration, code snippets, Resources, etc.
 * [stack-overflow-question](https://stackoverflow.com/questions/61900292/reading-binary-data-pixel-color-from-a-bmp-file-in-nodejs)
 * [installing-typescript](https://khalilstemmler.com/blogs/typescript/node-starter-project/)
-
-
+* [functional-style-async-class-constructors](https://betterprogramming.pub/how-to-write-an-async-class-constructor-in-typescript-javascript-7d7e8325c35e)
 * [bmp-imageConverter](https://online-converting.com/image/convert2bmp/)
 * [Byte-By-Byte Image creation](https://mrcoles.com/blog/making-images-byte-by-byte-javascript/)
 * [Bitmaps](https://medium.com/sysf/bits-to-bitmaps-a-simple-walkthrough-of-bmp-image-format-765dc6857393)

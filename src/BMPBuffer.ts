@@ -1,112 +1,121 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-// https://betterprogramming.pub/how-to-write-an-async-class-constructor-in-typescript-javascript-7d7e8325c35e
-// https://stackoverflow.com/questions/35743426/async-constructor-functions-in-typescript
 type mutatorFunction = () => void; // https://www.typescriptlang.org/docs/handbook/2/functions.html
 
 class BMPBuffer {
   // type definitions
   // TODO add function types
   imagePath: string | null;
-  ogImageBuffer: Buffer;
-  negativeBuffer: null | Buffer;
+  buffer: undefined | Buffer;
+  bufferTemp: undefined | Buffer;
   bitsPerPixel: number;
   fileName: string | null;
   offset: number;
   errors: string[];
   compressionMethod: null | 0;
 
-  constructor(bufferSamp: Buffer) {
+  constructor(pathToPic: string) {
     this.imagePath = null;
     this.fileName = null;
-    this.ogImageBuffer = bufferSamp;
-    this.negativeBuffer = null;
+    this.buffer = undefined;
+    this.bufferTemp = undefined;
     this.bitsPerPixel = 24;
     this.offset = 0;
     this.compressionMethod = null;
     this.errors = [];
+    this.setImagePath(pathToPic);
   }
 
-  init() {}
+  async init() {
+    this.buffer = await this.getBMPBuffer(this.imagePath!);
+
+    // Checks the Header and assures certain values are correct
+    this.analyzeBMP(this.buffer!);
+  }
 
   setImagePath(pathToPic: string): void {
     try {
       this.imagePath = path.join(path.dirname(__dirname), `${pathToPic}`);
-      this.fileName = path.basename(this.imagePath);
+      let fName = path.basename(this.imagePath);
+      this.fileName = fName.split('.')[0];
+      console.log('✅ File has Been Found');
     } catch (err) {
-      console.error('Please Provide A Correct Path To The File');
+      console.error(
+        '❌ The File Couldnt Be Found \n Please Provide A Correct Path To The File'
+      );
       this.errors.push('Incorrect Path To Image');
     }
   }
 
   async getBMPBuffer(imagePath: string) {
-    console.log('Reading File');
     try {
       const data = await fs.readFile(imagePath);
       const buffer = Buffer.from(data);
+      console.log('✅ Buffer Data has Been read');
       return buffer;
     } catch (err) {
-      console.error('Reading the file failed');
+      console.error('❌ Reading the file failed');
       this.errors.push('File Reading Failed');
     }
   }
 
-  copyBMPHeader(ogBuffer: Buffer, negativeBuffer: Buffer) {
-    console.log('Copying ogBMP Header');
+  copyBMPHeader(ogBuffer: Buffer, bufferTemp: Buffer) {
     for (let i = 0; i < 54; i++) {
-      negativeBuffer[i] = ogBuffer[i];
+      bufferTemp[i] = ogBuffer[i];
     }
-    console.log('Copying Complete', negativeBuffer);
-  }
-
-  mutateNegativeBufferColors() {
-    let start = this.offset;
-    console.log('Mutating the Colors');
-
-    // traverse and inverse colors
-    try {
-      for (let i = start; i < this.negativeBuffer!.length; i += 3) {
-        let r = this.ogImageBuffer.readUInt8(i);
-        let g = this.ogImageBuffer.readUInt8(i + 1);
-        let b = this.ogImageBuffer.readUInt8(i + 2);
-
-        const { newR, newG, newB } = this.invertRGB(r, g, b);
-
-        this.negativeBuffer!.writeUInt8(newR, i);
-        this.negativeBuffer!.writeUInt8(newG, i + 1);
-        this.negativeBuffer!.writeUInt8(newB, i + 2);
-      }
-    } catch (err) {
-      console.error('Something Went Wrong When Writing The New Colors');
-      this.errors.push('Failed Writing Negative Colors');
-    }
+    console.log('✅ Copying Complete');
   }
 
   async createNegativeBMP(): Promise<void> {
-    // allocate a buffer with equiv space as the ogBuffer
-    this.negativeBuffer = Buffer.alloc(this.ogImageBuffer!.length);
+    // allocate a buffer with equiv space as the buffer
+    this.bufferTemp = Buffer.alloc(this.buffer!.length);
     // copy the header values from the ogBuffer to the new buffer
-    this.copyBMPHeader(this.ogImageBuffer!, this.negativeBuffer);
+    this.copyBMPHeader(this.buffer!, this.bufferTemp);
     // Might need more checks here
 
-    this.mutateNegativeBufferColors();
+    this.mutatebufferTempColors();
 
     // write bmp file utilizing negative buffer
     try {
-      await this.writeImage(this.negativeBuffer);
-      console.log('The Creation has completed!');
+      await this.writeImage(this.bufferTemp, this.fileName!);
+      console.log('✅ The Creation has completed!');
     } catch (err) {
-      console.error('Creation had an error!', String(err));
+      console.error('❌ The Creation of the Image had an error!', String(err));
       this.errors.push('Writing The Negative File To Disk Failed');
     }
+
+    // clean up tempBuffer?
   }
 
-  writeImage(buffer: Buffer, fileName: string = 'sick') {
+  writeImage(buffer: Buffer, fileName: string = 'tempPic') {
     // write the image to the negatives folder
     return fs.writeFile(
       `${path.dirname(__dirname)}/negatives/${fileName}-negative.bmp`,
       buffer
     );
+  }
+
+  mutatebufferTempColors() {
+    let start = this.offset;
+
+    // traverse and inverse colors
+    try {
+      for (let i = start; i < this.bufferTemp!.length; i += 3) {
+        let r = this.buffer!.readUInt8(i);
+        let g = this.buffer!.readUInt8(i + 1);
+        let b = this.buffer!.readUInt8(i + 2);
+
+        const { newR, newG, newB } = this.invertRGB(r, g, b);
+
+        this.bufferTemp!.writeUInt8(newR, i);
+        this.bufferTemp!.writeUInt8(newG, i + 1);
+        this.bufferTemp!.writeUInt8(newB, i + 2);
+      }
+      console.log('✅ Mutating the Colors Complete');
+    } catch (err) {
+      console.error('❌ Something Went Wrong When Writing The New Colors');
+      this.errors.push('Failed Writing Negative Colors');
+    }
   }
 
   invertRGB(r: number, g: number, b: number) {
@@ -124,25 +133,29 @@ class BMPBuffer {
       bitsPerPixel,
       offset,
       compressionMethod,
-    } = this.readingBMPHeader(buffer);
+    } = this.readBMPHeader(buffer);
     if (format != 'BM') {
-      console.error('The File Must be a BMP format');
+      console.error(
+        '❌ File Format Incorrect \n(The File Must be a BMP format)'
+      );
     } else {
-      console.log('The File Format Is Correct!');
+      console.log('✅ The File Format Is Correct!');
     }
 
     if (bitsPerPixel !== this.bitsPerPixel) {
-      console.error('The Image must be in 24 BPP format');
+      console.error(
+        '❌ The Bytes Per Pixel Is Incorrect \nThe Image must be in 24 BPP format'
+      );
     } else {
-      console.log('The Bytes Per Pixel Is Correct!');
+      console.log('✅ The Bytes Per Pixel Is Correct!');
     }
 
     if (compressionMethod != 0) {
       console.error(
-        `The Image Must Have No Compression Used\n The Image Currently has the ${compressionMethod} Compression Method`
+        `❌ The Image Compression Is Incorrect \n The Image Must Have No Compression Used \n The Image Currently has the ${compressionMethod} Compression Method`
       );
     } else {
-      console.log('Hooray No Compression Was Used!');
+      console.log('✅ Hooray No Compression Was Used!');
     }
 
     this.offset = offset;
@@ -151,7 +164,7 @@ class BMPBuffer {
   // Extracts the header from the BMP Image
   // Some values are more important than others
   // Most importantly we need the OFFSET and the BytesPerPixel
-  readingBMPHeader(buffer: Buffer) {
+  readBMPHeader(buffer: Buffer) {
     const format = buffer.toString('utf-8', 0, 2);
     let pos = 2;
     const fileSize = buffer.readUInt32LE(pos); // (54 bytes header + 16 bytes data)
