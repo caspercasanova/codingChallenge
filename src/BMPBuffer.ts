@@ -4,7 +4,6 @@ type mutatorFunction = () => void; // https://www.typescriptlang.org/docs/handbo
 
 class BMPBuffer {
   // type definitions
-  // TODO add function types
   imagePath: string | null;
   buffer: undefined | Buffer;
   bufferTemp: undefined | Buffer;
@@ -59,7 +58,7 @@ class BMPBuffer {
     }
   }
 
-  copyBMPHeader(ogBuffer: Buffer, bufferTemp: Buffer) {
+  copyBMPHeader(ogBuffer: Buffer, bufferTemp: Buffer): void {
     for (let i = 0; i < 54; i++) {
       bufferTemp[i] = ogBuffer[i];
     }
@@ -87,11 +86,9 @@ class BMPBuffer {
       console.error('❌ The Creation of the Image had an error!', String(err));
       this.errors.push('Writing The Negative File To Disk Failed');
     }
-
-    // clean up tempBuffer?
   }
 
-  writeImage(buffer: Buffer, fileName: string = 'tempPic') {
+  writeImage(buffer: Buffer, fileName: string = 'tempPic'): Promise<any> {
     // write the image to the negatives folder
     return fs.writeFile(
       `${path.dirname(__dirname)}/negatives/${fileName}-negative.bmp`,
@@ -99,7 +96,7 @@ class BMPBuffer {
     );
   }
 
-  mutatebufferTempColors() {
+  mutatebufferTempColors(): void {
     let start = this.offset;
 
     // traverse and inverse colors
@@ -126,11 +123,10 @@ class BMPBuffer {
     let newR: number = 255 - r;
     let newG: number = 255 - g;
     let newB: number = 255 - b;
-
     return { newR, newG, newB };
   }
 
-  analyzeBMP(buffer: Buffer) {
+  analyzeBMP(buffer: Buffer): void {
     console.log('Analyzing Header...');
     const {
       format,
@@ -168,9 +164,9 @@ class BMPBuffer {
     this.offset = offset;
   }
 
-  // Extracts the header from the BMP Image
+  // Reads the header from the BMP Image
   // Some values are more important than others
-  // Most importantly we need the OFFSET and the BytesPerPixel
+  // Most importantly we need the OFFSET and the BytesPerPixel and FORMAT
   readBMPHeader(buffer: Buffer) {
     const format = buffer.toString('utf-8', 0, 2);
     let pos = 2;
